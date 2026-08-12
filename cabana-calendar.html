@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cabana Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --sand: #F4EEE0;
+    --sand-deep: #EAE0C9;
+    --ink: #2B4442;
+    --teal: #2E5C58;
+    --teal-deep: #1E403D;
+    --coral: #E2703A;
+    --coral-deep: #C6572A;
+    --night: #33437A;
+    --night-deep: #26325E;
+    --line: #D9CCA8;
+    --free: #FBF8F0;
+    --free-line: #CBBB8E;
+    --card: #FFFDF8;
+    --shadow: 0 2px 0 rgba(43,68,66,0.08);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--sand);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(43,68,66,0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 18px 14px 60px;
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .title-block h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 34px;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--teal-deep);
+    position: relative;
+    display: inline-block;
+    transform: rotate(-1deg);
+  }
+  .title-block .eyebrow{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--coral-deep);
+    font-weight: 700;
+    margin: 0 0 2px 2px;
+  }
+
+  .week-nav{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .week-nav button{
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.08s ease;
+  }
+  .week-nav button:hover{ background: var(--sand-deep); }
+  .week-nav button:active{ transform: translateY(1px); box-shadow:none; }
+
+  .week-label{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--teal-deep);
+    min-width: 190px;
+    text-align: center;
+  }
+  .today-btn{
+    font-family: 'Inter',sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .today-btn:hover{ background: var(--teal-deep); }
+
+  .legend{
+    display:flex; gap: 16px; align-items:center;
+    font-size: 12.5px; color: var(--teal-deep); font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .swatch{ width:13px; height:13px; border-radius:4px; display:inline-block; }
+  .swatch.free{ background: var(--free); border:1.5px dashed var(--free-line); }
+  .swatch.booked-day{ background: var(--coral); }
+  .swatch.booked-night{ background: var(--night); }
+
+  /* ---------- Grid ---------- */
+  .grid-scroll{
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grid{
+    display: grid;
+    grid-template-columns: 128px repeat(7, minmax(112px, 1fr));
+    min-width: 910px;
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .corner{
+    background: var(--teal-deep);
+    position: sticky; left:0; z-index: 3;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+  .day-head{
+    background: var(--teal-deep);
+    color: #F4EEE0;
+    text-align:center;
+    padding: 10px 4px 6px;
+    border-bottom: 2px solid var(--ink);
+    border-right: 1px solid rgba(244,238,224,0.18);
+  }
+  .day-head .dname{
+    font-family:'Fraunces',serif;
+    font-weight: 600;
+    font-size: 16px;
+    display:block;
+  }
+  .day-head .ddate{
+    font-size: 11px;
+    opacity: 0.75;
+    font-weight: 500;
+  }
+  .day-head.is-today{ background: var(--coral-deep); }
+
+  .subhead-row{ display:contents; }
+  .subhead{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1.5px solid var(--ink);
+    border-right: 1px solid rgba(43,68,66,0.15);
+  }
+  .subhead div{
+    text-align:center;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teal-deep);
+    padding: 5px 0;
+    background: var(--sand-deep);
+  }
+  .subhead div:first-child{ border-right: 1px solid var(--line); }
+
+  .cabana-label{
+    position: sticky; left:0; z-index: 2;
+    background: var(--sand-deep);
+    border-right: 2px solid var(--ink);
+    border-bottom: 1px solid var(--line);
+    display:flex; align-items:center;
+    padding: 0 12px;
+  }
+  .cabana-label .tag{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--teal-deep);
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    border-radius: 7px;
+    padding: 5px 9px;
+    display: inline-block;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .row-slots{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--line);
+  }
+  .day-cell-pair{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    border-right: 1px solid rgba(43,68,66,0.15);
+  }
+
+  .slot{
+    min-height: 54px;
+    border-right: 1px solid var(--line);
+    border-left: none;
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+    background: var(--free);
+    padding: 4px;
+    user-select: none;
+    transition: background 0.1s ease;
+  }
+  .slot:last-child{ border-right: none; }
+  .slot:hover{ background: #F1EAD6; }
+  .slot .plus{
+    color: var(--free-line);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .slot.booked-day{
+    background: var(--coral);
+    border-color: var(--coral-deep);
+  }
+  .slot.booked-day:hover{ background: var(--coral-deep); }
+  .slot.booked-night{
+    background: var(--night);
+    border-color: var(--night-deep);
+  }
+  .slot.booked-night:hover{ background: var(--night-deep); }
+  .slot.booked .note{
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align:center;
+    line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .slot.booked .note.empty-note{
+    font-family:'Fraunces',serif;
+    font-style: italic;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .week-label{ cursor: pointer; transition: color 0.1s ease; }
+  .week-label:hover{ color: var(--coral-deep); text-decoration: underline; }
+
+  /* ---------- Month overlay ---------- */
+  .month-overlay{
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(43,68,66,0.45);
+    z-index: 50;
+    align-items:center;
+    justify-content:center;
+    padding: 16px;
+  }
+  .month-overlay.open{ display:flex; }
+  .month-modal{
+    background: var(--sand);
+    border: 2px solid var(--ink);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 380px;
+    padding: 16px 16px 18px;
+    box-shadow: 0 8px 0 rgba(43,68,66,0.15);
+  }
+  .month-modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 10px;
+  }
+  .month-modal-head button{
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .month-modal-head button:hover{ background: var(--sand-deep); }
+  .month-modal-title{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--teal-deep);
+  }
+  .month-dow-row{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 4px;
+  }
+  .month-dow-row div{
+    text-align:center;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--teal-deep);
+    opacity: 0.7;
+    padding: 4px 0;
+  }
+  .month-days-grid{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .month-day{
+    aspect-ratio: 1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--free);
+    border: 1.5px solid var(--free-line);
+    cursor: pointer;
+  }
+  .month-day:hover{ background: #F1EAD6; }
+  .month-day.other-month{
+    opacity: 0.35;
+  }
+  .month-day.is-today{
+    border-color: var(--coral-deep);
+    color: var(--coral-deep);
+  }
+  .month-day.in-current-week{
+    background: var(--teal);
+    border-color: var(--teal-deep);
+    color: #fff;
+  }
+  .month-day.in-current-week:hover{ background: var(--teal-deep); }
+
+  footer.hint{
+    text-align:center;
+    font-size: 12.5px;
+    color: var(--teal);
+    opacity: 0.75;
+    margin-top: 16px;
+  }
+
+  @media (max-width: 480px){
+    .title-block h1{ font-size: 26px; }
+    header{ align-items:center; }
+    .week-label{ min-width: 150px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Booking Board</div>
+      <h1>Cabana Calendar</h1>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <div class="week-nav">
+        <button id="prevWeek" aria-label="Previous week">&#8249;</button>
+        <div class="week-label" id="weekLabel">—</div>
+        <button id="nextWeek" aria-label="Next week">&#8250;</button>
+      </div>
+      <button class="today-btn" id="todayBtn">This week</button>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><span class="swatch free"></span>Available</span>
+    <span><span class="swatch booked-day"></span>Booked · Day</span>
+    <span><span class="swatch booked-night"></span>Booked · Night</span>
+  </div>
+
+  <div class="grid-scroll">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer class="hint">Tap a square to book it. Tap again to clear it.</footer>
+</div>
+
+<div class="month-overlay" id="monthOverlay">
+  <div class="month-modal">
+    <div class="month-modal-head">
+      <button id="prevMonth" aria-label="Previous month">&#8249;</button>
+      <div class="month-modal-title" id="monthModalTitle">—</div>
+      <button id="nextMonth" aria-label="Next month">&#8250;</button>
+    </div>
+    <div class="month-dow-row">
+      <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
+    </div>
+    <div class="month-days-grid" id="monthDaysGrid"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://uhwulicwxpcaukgljpug.supabase.co";
+const SUPABASE_KEY = "sb_publishable_bCigQQT5dC6CTcOe74rjLQ_hWaXmUgL";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CABANAS = ["Cabana 21","Cabana 22","Cabana 23","Cabana 24","Cabana 25"];
+const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const SLOTS = ["day","night"];
+
+let currentMonday = getMonday(new Date());
+let weekData = {}; // { "0-Mon-day": true , ... } presence = booked
+
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay(); // 0 sun .. 6 sat
+  const diff = (day === 0 ? -6 : 1 - day);
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function isoDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function weekKey(monday){ return isoDate(monday); }
+function addDays(d, n){ const nd = new Date(d); nd.setDate(nd.getDate()+n); return nd; }
+function sameDate(a,b){ return isoDate(a) === isoDate(b); }
+
+function formatRange(monday){
+  const sunday = addDays(monday, 6);
+  const opts1 = { month: 'short', day: 'numeric' };
+  const start = monday.toLocaleDateString('en-US', opts1);
+  const end = sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${start} – ${end}`;
+}
+
+async function loadWeek(){
+  weekData = {};
+  try{
+    const { data, error } = await sb
+      .from('weeks')
+      .select('data')
+      .eq('week_start', weekKey(currentMonday))
+      .maybeSingle();
+    if(error) throw error;
+    if(data && data.data) weekData = data.data;
+  }catch(e){
+    console.error('Load failed', e);
+    weekData = {};
+  }
+  render();
+}
+
+async function saveWeek(){
+  try{
+    const { error } = await sb
+      .from('weeks')
+      .upsert({ week_start: weekKey(currentMonday), data: weekData });
+    if(error) throw error;
+  }catch(e){
+    console.error('Save failed', e);
+  }
+}
+
+function cellKey(cabanaIdx, dayIdx, slot){
+  return `${cabanaIdx}-${dayIdx}-${slot}`;
+}
+
+function render(){
+  document.getElementById('weekLabel').textContent = formatRange(currentMonday);
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  // Header row: corner + 7 day headers
+  const corner = document.createElement('div');
+  corner.className = 'corner';
+  grid.appendChild(corner);
+
+  const today = new Date();
+  for(let i=0;i<7;i++){
+    const d = addDays(currentMonday, i);
+    const head = document.createElement('div');
+    head.className = 'day-head' + (sameDate(d, today) ? ' is-today' : '');
+    head.innerHTML = `<span class="dname">${DAY_NAMES[i]}</span><span class="ddate">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
+    grid.appendChild(head);
+  }
+
+  // Sub-header row: corner blank + 7 x (Day/Night)
+  const subCorner = document.createElement('div');
+  subCorner.className = 'corner';
+  grid.appendChild(subCorner);
+  for(let i=0;i<7;i++){
+    const sub = document.createElement('div');
+    sub.className = 'subhead';
+    sub.innerHTML = `<div>Day</div><div>Night</div>`;
+    grid.appendChild(sub);
+  }
+
+  // Cabana rows
+  CABANAS.forEach((name, cIdx) => {
+    const label = document.createElement('div');
+    label.className = 'cabana-label';
+    label.innerHTML = `<span class="tag">${name}</span>`;
+    grid.appendChild(label);
+
+    for(let dIdx=0; dIdx<7; dIdx++){
+      const pair = document.createElement('div');
+      pair.className = 'day-cell-pair';
+      SLOTS.forEach(slot => {
+        const key = cellKey(cIdx, dIdx, slot);
+        const booked = !!weekData[key];
+        const cell = document.createElement('div');
+        cell.className = 'slot' + (booked ? ` booked booked-${slot}` : '');
+        cell.dataset.key = key;
+        cell.innerHTML = booked
+          ? `<span class="note empty-note">Booked</span>`
+          : `<span class="plus">+</span>`;
+        cell.addEventListener('click', () => toggleBooking(key));
+        pair.appendChild(cell);
+      });
+      grid.appendChild(pair);
+    }
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function toggleBooking(key){
+  if(weekData[key]){
+    delete weekData[key];
+  } else {
+    weekData[key] = true;
+  }
+  render();
+  await saveWeek();
+}
+
+/* ---------- Month overlay logic ---------- */
+let monthViewDate = new Date(currentMonday); // month currently shown in the picker
+
+function openMonthView(){
+  monthViewDate = new Date(currentMonday);
+  renderMonthView();
+  document.getElementById('monthOverlay').classList.add('open');
+}
+function closeMonthView(){
+  document.getElementById('monthOverlay').classList.remove('open');
+}
+
+function renderMonthView(){
+  const year = monthViewDate.getFullYear();
+  const month = monthViewDate.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const title = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  document.getElementById('monthModalTitle').textContent = title;
+
+  const gridStart = getMonday(monthStart);
+  const today = new Date();
+  const grid = document.getElementById('monthDaysGrid');
+  grid.innerHTML = '';
+
+  for(let i=0;i<42;i++){
+    const d = addDays(gridStart, i);
+    const cell = document.createElement('div');
+    cell.className = 'month-day';
+    if(d.getMonth() !== month) cell.classList.add('other-month');
+    if(sameDate(d, today)) cell.classList.add('is-today');
+    const cellMonday = getMonday(d);
+    if(sameDate(cellMonday, currentMonday)) cell.classList.add('in-current-week');
+    cell.textContent = d.getDate();
+    cell.addEventListener('click', () => {
+      currentMonday = getMonday(d);
+      closeMonthView();
+      loadWeek();
+    });
+    grid.appendChild(cell);
+  }
+}
+
+document.getElementById('weekLabel').addEventListener('click', openMonthView);
+document.getElementById('monthOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'monthOverlay') closeMonthView();
+});
+document.getElementById('prevMonth').addEventListener('click', () => {
+  monthViewDate = new Date(monthViewDate.getFullYear(), monthViewDate.getMonth() - 1, 1);
+  renderMonthView();
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  monthViewDate = new Date(monthViewDate.getFullYear(), monthViewDate.getMonth() + 1, 1);
+  renderMonthView();
+});
+
+document.getElementById('prevWeek').addEventListener('click', () => {
+  currentMonday = addDays(currentMonday, -7);
+  loadWeek();
+});
+document.getElementById('nextWeek').addEventListener('click', () => {
+  currentMonday = addDays(currentMonday, 7);
+  loadWeek();
+});
+document.getElementById('todayBtn').addEventListener('click', () => {
+  currentMonday = getMonday(new Date());
+  loadWeek();
+});
+
+loadWeek();
+</script>
+</body>
+</html>
