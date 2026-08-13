@@ -361,6 +361,95 @@
   }
   .month-day.in-current-week:hover{ background: var(--teal-deep); }
 
+  /* ---------- Login gate ---------- */
+  #appRoot{ display:none; }
+  .login-screen{
+    min-height: 100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 16px;
+  }
+  .login-card{
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 340px;
+    padding: 26px 24px;
+    box-shadow: 0 6px 0 rgba(43,68,66,0.12);
+  }
+  .login-card .eyebrow{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--coral-deep);
+    font-weight: 700;
+    margin: 0 0 2px 2px;
+  }
+  .login-card h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0 0 18px;
+    color: var(--teal-deep);
+  }
+  .login-card label{
+    display:block;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--teal-deep);
+    margin: 12px 0 5px;
+  }
+  .login-card input{
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 11px;
+    border: 1.5px solid var(--ink);
+    border-radius: 8px;
+    background: var(--free);
+    color: var(--ink);
+  }
+  .login-card input:focus{ outline: 2px solid var(--teal); outline-offset: 1px; }
+  .login-card button{
+    width: 100%;
+    margin-top: 18px;
+    font-family: 'Inter',sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    padding: 11px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .login-card button:hover{ background: var(--teal-deep); }
+  .login-card button:disabled{ opacity: 0.6; cursor: default; }
+  .login-error{
+    color: var(--coral-deep);
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-top: 12px;
+    min-height: 16px;
+  }
+  .logout-btn{
+    font-family: 'Inter',sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--card);
+    color: var(--teal-deep);
+    border: 1.5px solid var(--ink);
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .logout-btn:hover{ background: var(--sand-deep); }
+
   footer.hint{
     text-align:center;
     font-size: 12.5px;
@@ -377,6 +466,22 @@
 </style>
 </head>
 <body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="eyebrow">Booking Board</div>
+    <h1>Cabana Calendar</h1>
+    <form id="loginForm">
+      <label for="loginEmail">Username</label>
+      <input type="text" id="loginEmail" autocomplete="username" required>
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <button type="submit" id="loginBtn">Log in</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+  </div>
+</div>
+
+<div id="appRoot">
 <div class="wrap">
   <header>
     <div class="title-block">
@@ -389,7 +494,10 @@
         <div class="week-label" id="weekLabel">—</div>
         <button id="nextWeek" aria-label="Next week">&#8250;</button>
       </div>
-      <button class="today-btn" id="todayBtn">This week</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="today-btn" id="todayBtn">This week</button>
+        <button class="logout-btn" id="logoutBtn">Log out</button>
+      </div>
     </div>
   </header>
 
@@ -419,6 +527,8 @@
     <div class="month-days-grid" id="monthDaysGrid"></div>
   </div>
 </div>
+</div>
+
 
 <script>
 const SUPABASE_URL = "https://uhwulicwxpcaukgljpug.supabase.co";
@@ -629,7 +739,50 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   loadWeek();
 });
 
-loadWeek();
+/* ---------- Auth gate ---------- */
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'block';
+  loadWeek();
+}
+function showLogin(){
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const errBox = document.getElementById('loginError');
+  errBox.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  btn.textContent = 'Log in';
+  if(error){
+    errBox.textContent = 'Wrong username or password.';
+    return;
+  }
+  showApp();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  showLogin();
+});
+
+(async function initAuth(){
+  const { data } = await sb.auth.getSession();
+  if(data && data.session){
+    showApp();
+  } else {
+    showLogin();
+  }
+})();
+
 </script>
 </body>
 </html>
