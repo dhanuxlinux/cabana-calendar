@@ -789,6 +789,8 @@ function showApp(){
 function showLogin(){
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginForm').reset();
+  document.getElementById('loginError').textContent = '';
 }
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
