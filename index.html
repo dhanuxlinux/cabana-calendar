@@ -414,6 +414,23 @@
     color: var(--ink);
   }
   .login-card input:focus{ outline: 2px solid var(--teal); outline-offset: 1px; }
+  .remember-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    margin: 16px 0 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--teal-deep);
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+  }
+  .remember-row input[type="checkbox"]{
+    width: 15px; height: 15px;
+    accent-color: var(--teal);
+    cursor: pointer;
+  }
   .login-card button{
     width: 100%;
     margin-top: 18px;
@@ -475,6 +492,10 @@
       <input type="text" id="loginEmail" autocomplete="username" required>
       <label for="loginPassword">Password</label>
       <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <label class="remember-row" for="rememberMe">
+        <input type="checkbox" id="rememberMe" checked>
+        <span>Remember me on this device</span>
+      </label>
       <button type="submit" id="loginBtn">Log in</button>
       <div class="login-error" id="loginError"></div>
     </form>
@@ -533,7 +554,27 @@
 <script>
 const SUPABASE_URL = "https://uhwulicwxpcaukgljpug.supabase.co";
 const SUPABASE_KEY = "sb_publishable_bCigQQT5dC6CTcOe74rjLQ_hWaXmUgL";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// "Remember me" support: when checked, the session is kept in localStorage
+// (survives closing the browser/tab). When unchecked, it's kept in
+// sessionStorage (cleared as soon as the tab/browser is closed).
+const REMEMBER_FLAG_KEY = 'cabana-remember-me';
+function activeStorage(){
+  return localStorage.getItem(REMEMBER_FLAG_KEY) === '1' ? window.localStorage : window.sessionStorage;
+}
+const rememberAwareStorage = {
+  getItem: (key) => activeStorage().getItem(key),
+  setItem: (key, value) => activeStorage().setItem(key, value),
+  removeItem: (key) => activeStorage().removeItem(key),
+};
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: rememberAwareStorage
+  }
+});
 
 const CABANAS = ["Cabana 21","Cabana 22","Cabana 23","Cabana 24","Cabana 25"];
 const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -754,11 +795,17 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  const remember = document.getElementById('rememberMe').checked;
   const btn = document.getElementById('loginBtn');
   const errBox = document.getElementById('loginError');
   errBox.textContent = '';
   btn.disabled = true;
   btn.textContent = 'Logging in…';
+
+  // Set the flag BEFORE signing in, so the Supabase client writes the
+  // session to the right place (localStorage vs sessionStorage) from the start.
+  localStorage.setItem(REMEMBER_FLAG_KEY, remember ? '1' : '0');
+
   const { error } = await sb.auth.signInWithPassword({ email, password });
   btn.disabled = false;
   btn.textContent = 'Log in';
@@ -771,6 +818,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await sb.auth.signOut();
+  localStorage.removeItem(REMEMBER_FLAG_KEY);
   showLogin();
 });
 
